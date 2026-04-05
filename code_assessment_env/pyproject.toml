@@ -11,7 +11,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "openenv-code-assessment-env"
 version = "0.1.0"
-description = "Code Output Assessment environment for OpenEnv"
+description = "OpenEnv RL environment for AI response evaluation — correctness, tone appropriateness, and multi-dimensional quality scoring across structured user profiles"
 requires-python = ">=3.10"
 dependencies = [
     # Core OpenEnv runtime (provides FastAPI server + HTTP client types)
