@@ -53,7 +53,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from code_assessment_env import CodeAssessmentAction, CodeAssessmentEnv
-IMAGE_NAME = os.getenv("IMAGE_NAME", "code_assessment_env:latest")
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
 
 API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
@@ -180,7 +180,7 @@ def get_model_answer(
 async def main() -> None:
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
-    env = await CodeAssessmentEnv.from_docker_image(IMAGE_NAME)
+    env = await CodeAssessmentEnv.from_docker_image(LOCAL_IMAGE_NAME)
 
     rewards: List[float] = []
     steps_taken = 0
