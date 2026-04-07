@@ -2,10 +2,11 @@
 Inference Script — AI Response Evaluation Environment
 =====================================================
 MANDATORY
-- Variables: API_BASE_URL, MODEL_NAME, HF_TOKEN, LOCAL_IMAGE_NAME
+- Variables: API_BASE_URL, MODEL_NAME, HF_TOKEN
 - Defaults set only for API_BASE_URL and MODEL_NAME (not HF_TOKEN)
 - Must be named inference.py at repo root
 - Must use OpenAI client for all LLM calls
+- Connects to the environment server at localhost:8000 (started by container)
 
 STDOUT FORMAT
     [START] task=<task_name> env=<benchmark> model=<model_name>
@@ -25,10 +26,11 @@ load_dotenv()
 
 from code_assessment_env import CodeAssessmentAction, CodeAssessmentEnv
 
-LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME", "code_assessment_env:latest")
 HF_TOKEN = os.getenv("HF_TOKEN")
+if not HF_TOKEN:
+    raise ValueError("HF_TOKEN environment variable is required but not set.")
 
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 TASK_NAME = os.getenv("TASK_NAME", "ai_response_evaluation")
 BENCHMARK = os.getenv("BENCHMARK", "code_assessment_env")
@@ -197,8 +199,7 @@ def get_model_answer(
         )
         text = (completion.choices[0].message.content or "").strip()
         answer = text if text else "unknown"
-    except Exception as exc:
-        print(f"[DEBUG] Model request failed: {exc}", flush=True)
+    except Exception:
         answer = "unknown"
 
     history.append({"role": "assistant", "content": answer})
@@ -209,13 +210,8 @@ def get_model_answer(
 async def main() -> None:
     client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
-    # Connect to already-running server (validator provides ENV_URL),
-    # fall back to starting a Docker container for local testing.
-    env_url = os.getenv("ENV_URL")
-    if env_url:
-        env = CodeAssessmentEnv(base_url=env_url)
-    else:
-        env = await CodeAssessmentEnv.from_docker_image(LOCAL_IMAGE_NAME)
+    env_url = os.getenv("ENV_URL", "http://localhost:8000")
+    env = CodeAssessmentEnv(base_url=env_url)
 
     rewards: List[float] = []
     history: List[dict] = []
@@ -253,7 +249,6 @@ async def main() -> None:
                 result = await env.step(CodeAssessmentAction(answer=answer))
                 obs = result.observation
             except Exception as exc:
-                print(f"[DEBUG] env.step() failed: {exc}", flush=True)
                 log_step(step=step, action=answer[:60], reward=0.0, done=True, error=str(exc))
                 steps_taken = step
                 break
@@ -274,14 +269,14 @@ async def main() -> None:
         score = min(max(score, 0.0), 1.0)
         success = score >= SUCCESS_SCORE_THRESHOLD
 
-    except Exception as exc:
-        print(f"[DEBUG] Episode failed: {exc}", flush=True)
+    except Exception:
+        pass
 
     finally:
         try:
             await env.close()
-        except Exception as e:
-            print(f"[DEBUG] env.close() error: {e}", flush=True)
+        except Exception:
+            pass
         log_end(success=success, steps=steps_taken, rewards=rewards)
 
 
