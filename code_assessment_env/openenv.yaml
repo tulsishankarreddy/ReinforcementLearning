@@ -4,3 +4,19 @@ type: space
 runtime: fastapi
 app: server.app:app
 port: 8000
+
+tasks:
+  - id: correctness_check
+    name: Correctness & Instruction Adherence
+    difficulty: easy
+    grader: programmatic
+
+  - id: tone_appropriateness
+    name: Tone & Audience Appropriateness
+    difficulty: medium
+    grader: programmatic
+
+  - id: multi_dimensional
+    name: Multi-dimensional Quality Scoring
+    difficulty: hard
+    grader: programmatic
