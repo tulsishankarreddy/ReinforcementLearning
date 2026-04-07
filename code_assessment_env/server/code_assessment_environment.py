@@ -597,11 +597,11 @@ class CodeAssessmentEnvironment(Environment):
             expected_output=None,
             feedback="Welcome! Evaluate the AI response and submit your judgment.",
             is_correct=False,
-            partial_credit=0.0,
+            partial_credit=0.01,
             problems_solved=0,
             current_streak=0,
             done=False,
-            reward=0.0,
+            reward=0.01,
         )
 
     def step(self, action: CodeAssessmentAction) -> CodeAssessmentObservation:  # type: ignore[override]
@@ -611,8 +611,8 @@ class CodeAssessmentEnvironment(Environment):
 
         is_correct, partial_credit, feedback = self._grade(task_type, action.answer, problem)
 
-        reward = self._calculate_reward(is_correct, partial_credit)
-        self._total_reward += reward
+        shaped_reward = self._calculate_reward(is_correct, partial_credit)
+        self._total_reward += shaped_reward
 
         if is_correct:
             self._problems_solved += 1
@@ -623,8 +623,11 @@ class CodeAssessmentEnvironment(Environment):
         done = self._state.step_count >= self.MAX_STEPS
         expected_str = self._format_expected(task_type, problem)
 
+        # Step-based progression: guarantee all 3 tasks are reached
+        self._update_difficulty()
+
         if is_correct:
-            self._advance()
+            self._pick_next_problem()
 
         next_task = TASK_TYPES[self._difficulty]
         p = self._current_problem
@@ -644,8 +647,9 @@ class CodeAssessmentEnvironment(Environment):
             problems_solved=self._problems_solved,
             current_streak=self._current_streak,
             done=done,
-            reward=reward,
+            reward=partial_credit,
             metadata={
+                "shaped_reward": shaped_reward,
                 "total_reward": self._total_reward,
                 "step": self._state.step_count,
                 "task_type": next_task,
@@ -671,15 +675,23 @@ class CodeAssessmentEnvironment(Environment):
             return ", ".join(f"{k}={v}" for k, v in scores.items())
 
     # ------------------------------------------------------------------
+    # Clamp score to strictly (0, 1) — validator rejects 0.0 and 1.0
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _clamp(score: float) -> float:
+        return max(0.01, min(0.99, score))
+
+    # ------------------------------------------------------------------
     # Grading dispatch
     # ------------------------------------------------------------------
     def _grade(self, task_type: str, answer: str, problem: Dict) -> Tuple[bool, float, str]:
         if task_type == "correctness_check":
-            return self._grade_correctness(answer, problem)
+            is_correct, score, fb = self._grade_correctness(answer, problem)
         elif task_type == "tone_appropriateness":
-            return self._grade_tone(answer, problem)
+            is_correct, score, fb = self._grade_tone(answer, problem)
         else:
-            return self._grade_multi_dimensional(answer, problem)
+            is_correct, score, fb = self._grade_multi_dimensional(answer, problem)
+        return is_correct, self._clamp(score), fb
 
     # ── Task 1: Correctness Check ─────────────────────────────────────
     def _grade_correctness(self, answer: str, problem: Dict) -> Tuple[bool, float, str]:
@@ -695,7 +707,7 @@ class CodeAssessmentEnvironment(Environment):
         r_match = expected_r in given_r or given_r in expected_r
 
         if j_match and r_match:
-            return True, 1.0, f"Correct! {problem['explanation']}"
+            return True, 0.95, f"Correct! {problem['explanation']}"
         if j_match:
             return False, 0.6, f"Judgment correct, wrong reason. Expected reason: '{expected_r}'. {problem['explanation']}"
         if r_match:
@@ -704,7 +716,7 @@ class CodeAssessmentEnvironment(Environment):
         VALID = {"correct", "incorrect", "partially-correct"}
         if given_j in VALID:
             return False, 0.2, f"Wrong. Expected: '{expected_j}, {expected_r}'. {problem['explanation']}"
-        return False, 0.0, f"Invalid format. Expected: '{expected_j}, {expected_r}'. {problem['explanation']}"
+        return False, 0.05, f"Invalid format. Expected: '{expected_j}, {expected_r}'. {problem['explanation']}"
 
     # ── Task 2: Tone & Audience Appropriateness ───────────────────────
     def _grade_tone(self, answer: str, problem: Dict) -> Tuple[bool, float, str]:
@@ -732,7 +744,7 @@ class CodeAssessmentEnvironment(Environment):
         # Score issues via F1
         if "none" in expected_issues:
             if found_issues <= {"none"} or not found_issues:
-                issues_score = 1.0
+                issues_score = 0.95
             else:
                 found_issues.discard("none")
                 issues_score = 0.2  # false positives
@@ -741,15 +753,15 @@ class CodeAssessmentEnvironment(Environment):
             tp = len(found_issues & expected_issues)
             fp = len(found_issues - expected_issues)
             fn = len(expected_issues - found_issues)
-            prec = tp / (tp + fp) if (tp + fp) else 0.0
-            rec = tp / (tp + fn) if (tp + fn) else 0.0
-            issues_score = (2 * prec * rec / (prec + rec)) if (prec + rec) else 0.0
+            prec = tp / (tp + fp) if (tp + fp) else 0.05
+            rec = tp / (tp + fn) if (tp + fn) else 0.05
+            issues_score = (2 * prec * rec / (prec + rec)) if (prec + rec) else 0.05
 
         # Combined score: 50% rating + 50% issues
-        score = (0.5 if rating_match else 0.0) + 0.5 * issues_score
+        score = (0.45 if rating_match else 0.05) + 0.5 * issues_score
 
-        if rating_match and issues_score >= 0.99:
-            return True, 1.0, f"Correct! {problem['explanation']}"
+        if rating_match and issues_score >= 0.9:
+            return True, 0.95, f"Correct! {problem['explanation']}"
 
         parts_fb = []
         if not rating_match:
@@ -777,7 +789,7 @@ class CodeAssessmentEnvironment(Environment):
 
         parsed_count = sum(1 for v in given.values() if v is not None)
         if parsed_count == 0:
-            return False, 0.0, (
+            return False, 0.05, (
                 f"Could not parse scores. Expected format: correctness=N, tone=N, empathy=N, safety=N. "
                 f"Expected: {self._format_expected('multi_dimensional', problem)}. "
                 f"{problem['explanation']}"
@@ -790,31 +802,31 @@ class CodeAssessmentEnvironment(Environment):
             exp = expected[dim]
             got = given[dim]
             if got is None:
-                dim_scores[dim] = 0.0
+                dim_scores[dim] = 0.05
                 dim_feedback.append(f"{dim}: missing (expected {exp})")
                 continue
 
             diff = abs(exp - got)
             if diff <= 1:
-                dim_scores[dim] = 1.0
+                dim_scores[dim] = 0.95
             elif diff <= 2:
                 dim_scores[dim] = 0.7
             elif diff <= 3:
                 dim_scores[dim] = 0.4
             else:
-                dim_scores[dim] = max(0.0, 1.0 - diff / 10.0)
+                dim_scores[dim] = max(0.05, 0.95 - diff / 10.0)
 
             if diff > 1:
                 dim_feedback.append(f"{dim}: gave {got}, expected {exp} (off by {diff})")
 
         overall = sum(dim_scores.values()) / 4.0
-        all_close = all(s >= 1.0 for s in dim_scores.values())
+        all_close = all(s >= 0.9 for s in dim_scores.values())
 
         if all_close:
-            return True, 1.0, f"Excellent! All dimensions within ±1. {problem['explanation']}"
+            return True, 0.95, f"Excellent! All dimensions within ±1. {problem['explanation']}"
 
         detail = ". ".join(dim_feedback) if dim_feedback else "Close on all dimensions"
-        return False, round(overall, 2), (
+        return False, round(max(0.05, min(0.95, overall)), 2), (
             f"Score: {overall:.0%}. {detail}. {problem['explanation']}"
         )
 
@@ -822,6 +834,7 @@ class CodeAssessmentEnvironment(Environment):
     # Reward
     # ------------------------------------------------------------------
     def _calculate_reward(self, is_correct: bool, score: float) -> float:
+        """Shaped reward — stored in metadata, not in observation.reward."""
         multipliers = {"easy": 1.0, "medium": 2.0, "hard": 5.0}
         m = multipliers[self._difficulty]
 
@@ -829,23 +842,33 @@ class CodeAssessmentEnvironment(Environment):
             reward = m
             if self._current_streak >= 3:
                 reward += 0.5
-        elif score > 0:
+        elif score > 0.1:
             reward = m * score
             if self._difficulty == "easy":
                 reward *= 0.5
         else:
-            reward = -0.3 if self._difficulty == "hard" else 0.0
+            reward = 0.05
         return reward
 
     # ------------------------------------------------------------------
-    # Progression
+    # Progression (step-based — guarantees all 3 tasks are reached)
     # ------------------------------------------------------------------
-    def _advance(self):
-        if self._problems_solved >= 8 and self._difficulty != "hard":
-            self._difficulty = "hard"
-        elif self._problems_solved >= 4 and self._difficulty == "easy":
-            self._difficulty = "medium"
+    def _update_difficulty(self):
+        """Switch task based on step count so all 3 tasks are always exercised."""
+        step = self._state.step_count
+        if step <= 5:
+            new_diff = "easy"
+        elif step <= 10:
+            new_diff = "medium"
+        else:
+            new_diff = "hard"
 
+        if new_diff != self._difficulty:
+            self._difficulty = new_diff
+            self._pick_next_problem()
+
+    def _pick_next_problem(self):
+        """Select a new problem from the current difficulty, avoiding repeats."""
         pool = PROBLEMS[self._difficulty]
         candidates = [p for p in pool if id(p) not in self._used]
         if not candidates:
