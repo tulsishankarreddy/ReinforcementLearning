@@ -22,7 +22,10 @@ from typing import List, Optional
 from openai import OpenAI
 
 from code_assessment_env import CodeAssessmentAction, CodeAssessmentEnv
+from dotenv import load_dotenv
 
+# Load environment variables from .env file if present
+load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
 if not HF_TOKEN:
     raise ValueError("HF_TOKEN environment variable is required but not set.")
