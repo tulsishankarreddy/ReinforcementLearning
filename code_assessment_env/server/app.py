@@ -38,7 +38,7 @@ app = create_app(
     CodeAssessmentAction,
     CodeAssessmentObservation,
     env_name="code_assessment_env",
-    max_concurrent_envs=1,
+    max_concurrent_envs=10,
 )
 
 

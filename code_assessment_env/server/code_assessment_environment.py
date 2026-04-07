@@ -572,7 +572,9 @@ class CodeAssessmentEnvironment(Environment):
     # ------------------------------------------------------------------
     # OpenEnv interface
     # ------------------------------------------------------------------
-    def reset(self) -> CodeAssessmentObservation:
+    def reset(self, seed: int | None = None) -> CodeAssessmentObservation:
+        if seed is not None:
+            random.seed(seed)
         self._state = State(episode_id=str(uuid4()), step_count=0)
         self._problems_solved = 0
         self._current_streak = 0
