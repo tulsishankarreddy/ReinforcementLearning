@@ -37,6 +37,7 @@ BENCHMARK = os.getenv("BENCHMARK", "code_assessment_env")
 MAX_STEPS = 15
 TEMPERATURE = 0.2
 MAX_TOKENS = 200
+SUCCESS_SCORE_THRESHOLD = 0.5
 
 # All 3 task types — inference must exercise all of them
 TASK_IDS = ["correctness_check", "tone_appropriateness", "multi_dimensional"]
@@ -165,9 +166,9 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
     )
 
 
-def log_end(success: bool, steps: int, rewards: List[float]) -> None:
+def log_end(success: bool, steps: int, rewards: List[float], score: float) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}", flush=True)
+    print(f"[END] success={str(success).lower()} steps={steps} score={score:.4f} rewards={rewards_str}", flush=True)
 
 
 # ─── Prompt building ───────────────────────────────────────────────────────
@@ -354,6 +355,7 @@ async def main() -> None:
                 break
 
             reward = result.reward if result.reward is not None else 0.05
+            reward = max(1e-6, min(reward, 1 - 1e-6))
             done = result.done
 
             rewards.append(reward)
@@ -362,22 +364,22 @@ async def main() -> None:
             if done:
                 break
 
-        success = bool(
-            result is not None
-            and obs is not None
-            and result.done
-            and obs.problems_solved > 0
-        )
+        score = sum(rewards) / len(rewards) if rewards else 0.0
+        score = max(1e-6, min(score, 1 - 1e-6))
+        success = score >= SUCCESS_SCORE_THRESHOLD
 
     except Exception as exc:
         print(f"Episode error: {exc}", file=sys.stderr, flush=True)
 
     finally:
+        score = sum(rewards) / len(rewards) if rewards else 0.0
+        score = max(1e-6, min(score, 1 - 1e-6))
+        success = score >= SUCCESS_SCORE_THRESHOLD
         try:
             await env.close()
         except Exception as exc:
             print(f"Close error: {exc}", file=sys.stderr, flush=True)
-        log_end(success=success, steps=steps_taken, rewards=rewards)
+        log_end(success=success, steps=steps_taken, rewards=rewards, score=score)
         if server_proc:
             server_proc.terminate()
 
