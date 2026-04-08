@@ -6,7 +6,6 @@
 
 """
 FastAPI application for the AI Response Evaluation Environment.
-
 Endpoints:
     - POST /reset: Reset the environment
     - POST /step: Execute an action
@@ -49,6 +48,7 @@ async def list_tasks():
     tasks = []
     for difficulty, task_type in TASK_TYPES.items():
         tasks.append({
+            "id": task_type,
             "task_id": task_type,
             "name": task_type,
             "difficulty": difficulty,
@@ -74,14 +74,12 @@ async def list_tasks():
 async def grade_task(payload: dict):
     """
     Score a single answer for a specific task.
-
     Request body:
         {
             "task_id": "correctness_check",   # or tone_appropriateness, multi_dimensional
             "answer": "incorrect, factual-error",
             "problem_index": 0                 # optional, random if omitted
         }
-
     Returns:
         {"task_id": ..., "score": 0.xx, "is_correct": bool, "feedback": "..."}
     """
