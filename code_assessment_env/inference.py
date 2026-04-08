@@ -258,11 +258,52 @@ def get_model_answer(
     return answer
 
 
+# ─── Server startup ─────────────────────────────────────────────────────────
+import subprocess
+import time
+
+
+def start_server() -> subprocess.Popen:
+    """Start the environment server as a background subprocess."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "server.app:app",
+         "--host", "0.0.0.0", "--port", "7860"],
+        cwd=script_dir,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return proc
+
+
+def wait_for_server(url: str, timeout: int = 30) -> bool:
+    """Wait until the server responds."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            import urllib.request
+            req = urllib.request.urlopen(f"{url}/health", timeout=3)
+            if req.status == 200:
+                return True
+        except Exception:
+            pass
+        time.sleep(1)
+    return False
+
+
 # ─── Main loop ──────────────────────────────────────────────────────────────
 async def main() -> None:
     client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
     env_url = os.getenv("ENV_URL", "http://localhost:7860")
+    server_proc = None
+
+    # Start the server if it's not already running
+    if not wait_for_server(env_url, timeout=3):
+        server_proc = start_server()
+        if not wait_for_server(env_url, timeout=30):
+            print("Server failed to start", file=sys.stderr, flush=True)
+
     env = CodeAssessmentEnv(base_url=env_url)
 
     rewards: List[float] = []
@@ -337,6 +378,8 @@ async def main() -> None:
         except Exception as exc:
             print(f"Close error: {exc}", file=sys.stderr, flush=True)
         log_end(success=success, steps=steps_taken, rewards=rewards)
+        if server_proc:
+            server_proc.terminate()
 
 
 if __name__ == "__main__":
