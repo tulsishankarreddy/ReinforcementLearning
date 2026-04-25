@@ -20,6 +20,8 @@ tags:
 
 # AI Response Evaluation Environment
 
+🚀 **Live Space**: [huggingface.co/spaces/rsaibhargav/ai-response-eval-env](https://huggingface.co/spaces/rsaibhargav/ai-response-eval-env)
+
 An OpenEnv RL environment that trains LLM agents to evaluate AI responses — and **gets harder as the agent gets better**, automatically.
 
 Built for the **Meta PyTorch OpenEnv Hackathon** under Theme #4: Self-Improvement.  
@@ -407,19 +409,33 @@ docker run -p 7860:7860 \
 
 ### Deploy to Hugging Face Spaces
 
-The repo is already Spaces-shaped (see the YAML front-matter at the top of this README, the `Dockerfile`, and `openenv.yaml`). To deploy:
+✅ **This environment is already deployed**: [huggingface.co/spaces/rsaibhargav/ai-response-eval-env](https://huggingface.co/spaces/rsaibhargav/ai-response-eval-env)
 
-```bash
-# 1. Create a new Space on https://huggingface.co/new-space
-#    SDK: Docker, Hardware: CPU basic is enough for the env server.
+The Space exposes the same FastAPI endpoints as the local server (`/reset`, `/step`, `/state`, `/schema`, `/health`) and can be driven from anywhere:
 
-# 2. Add it as a remote and push:
-huggingface-cli login            # or: export HF_TOKEN=hf_...
-git remote add space https://huggingface.co/spaces/<your-username>/ai-response-eval-env
-git push space main
+```python
+from ai_response_eval_env import AIResponseEvalAction, AIResponseEvalEnv
+env = AIResponseEvalEnv(base_url="https://rsaibhargav-ai-response-eval-env.hf.space")
 ```
 
-The Space exposes the same FastAPI endpoints as the local server (`/reset`, `/step`, `/state`, `/schema`, `/health`). Once live, it can be driven from anywhere with the `AIResponseEvalEnv(base_url="https://<your-username>-ai-response-eval-env.hf.space")` client.
+**To redeploy** (e.g. after code changes), use a clean single-snapshot repo so HF doesn't reject inline binaries from old history:
+
+```bash
+TMP=/tmp/hf-space-deploy
+rm -rf "$TMP" && mkdir -p "$TMP"
+cp -r ai_response_eval_env/. "$TMP"/
+cd "$TMP"
+find . -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null
+find . -name "*.pyc" -delete
+find . -name ".venv" -type d -exec rm -rf {} + 2>/dev/null
+git init -b main && git lfs install --local && git lfs track "*.png"
+git add .gitattributes && git add .
+git commit -m "Deploy update"
+git remote add origin https://huggingface.co/spaces/rsaibhargav/ai-response-eval-env
+git push origin main --force
+```
+
+`git lfs track "*.png"` is essential — HF Spaces reject inline binaries.
 
 ### 2. Run baseline inference
 ```bash
