@@ -1,0 +1,69 @@
+spec_version: 1
+name: ai_response_eval_env
+type: space
+runtime: fastapi
+app: server.app:app
+port: 7860
+
+tasks:
+  - id: correctness_check
+    name: Correctness & Instruction Adherence
+    difficulty: easy
+    reward_multiplier: 1.0
+    grader:
+      type: programmatic
+      score_range:
+        min: 0.01
+        max: 0.99
+
+  - id: tone_appropriateness
+    name: Tone & Audience Appropriateness
+    difficulty: medium
+    reward_multiplier: 2.0
+    grader:
+      type: programmatic
+      score_range:
+        min: 0.01
+        max: 0.99
+
+  - id: multi_dimensional
+    name: Multi-dimensional Quality Scoring
+    difficulty: hard
+    reward_multiplier: 5.0
+    grader:
+      type: programmatic
+      score_range:
+        min: 0.01
+        max: 0.99
+
+  - id: conversation_coherence
+    name: Multi-turn Conversation Coherence
+    difficulty: ultra
+    reward_multiplier: 10.0
+    grader:
+      type: programmatic
+      score_range:
+        min: 0.01
+        max: 0.99
+
+  - id: adversarial_check
+    name: Adversarial Robustness (unlocks after easy + medium)
+    difficulty: adversarial
+    reward_multiplier: 8.0
+    unlock_conditions:
+      - task_id: correctness_check
+        min_accuracy: 0.65
+      - task_id: tone_appropriateness
+        min_accuracy: 0.60
+    grader:
+      type: programmatic
+      score_range:
+        min: 0.01
+        max: 0.99
+
+environment:
+  max_steps: 24
+  adaptive_curriculum: true
+  self_learning: true
+  expert_personas: 4
+  dynamic_problem_generation: true

@@ -1,0 +1,15 @@
+# Core dependencies for AI Response Evaluation Environment
+openenv-core>=0.2.2
+pydantic>=2.12.0
+fastapi>=0.135.0
+uvicorn>=0.42.0
+python-dotenv>=1.2.0
+
+# For LLM agent inference
+openai>=2.30.0
+
+# HTTP client for testing
+httpx>=0.28.0
+
+# Optional: for local development and testing
+pytest>=7.4.0
