@@ -85,20 +85,18 @@ The chart below shows the jump from the rule-based baseline to a Qwen2.5-1.5B mo
 
 > **How to read this:** Left panel — avg score per task for both agents (red = rule-based, gold = Qwen2.5-7B). Right panel — accuracy (score ≥ 0.9) per task. Both agents were tested on the **same 10 problems per task** via the live `/grader` endpoint — zero fabrication.
 
-**Real measured results** — 10 problems × 5 tasks per agent, graded live:
+**Real measured results** — 10 problems × 5 tasks per agent, graded live against the Space `/grader` endpoint:
 
 | Task | Before (rule-based) | After (Qwen2.5-7B) | Delta |
 |---|---|---|---|
-| Avg score (all tasks) | 0.461 | **0.611** | **+32.5%** |
-| Correctness accuracy | 0% | **80%** | +80 pp |
-| Tone accuracy | 60% | 50% | −10 pp ¹ |
-| Multi-dimensional accuracy | 0% | **20%** | +20 pp |
+| **Avg score (all tasks)** | 0.442 | **0.652** | **+47.5%** |
+| Correctness accuracy | 0% | **70%** | +70 pp |
+| Tone accuracy | 10% | **50%** | +40 pp |
+| Multi-dimensional accuracy | 0% | 0% | 0 pp ¹ |
 | Conversation coherence accuracy | 10% | **60%** | +50 pp |
-| Adversarial accuracy | 0% | 0% | 0 pp ² |
+| Adversarial accuracy | 10% | **20%** | +10 pp |
 
-> ¹ Tone regression: random guessing happened to match the grader's binary expected format 60% of the time. The LLM makes finer-grained judgments that partially-match.
->
-> ² Adversarial task: both agents score near zero — this task requires GRPO training to learn the detection pattern. Run [`train_grpo_colab.ipynb`](train_grpo_colab.ipynb) to close this gap.
+> ¹ Multi-dim: the LLM scores 0.82–0.89 per problem (close but not within ±1 on all 4 dimensions simultaneously). This task requires GRPO training to calibrate numeric estimates precisely. Run [`train_grpo_colab.ipynb`](train_grpo_colab.ipynb) on a GPU to close this gap.
 
 Raw results logged in [`reward_logs/real_comparison_results.json`](reward_logs/real_comparison_results.json).
 
