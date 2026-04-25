@@ -83,32 +83,34 @@ The chart below shows the jump from the rule-based baseline to a Qwen2.5-1.5B mo
 
 ![Before vs After](reward_logs/before_after_comparison.png)
 
-> **How to read this:**  Left panel — per-episode avg step reward across 20 inference runs (red = rule-based, gold = GRPO-trained). Middle — the GRPO training curve showing reward climbing from ~0.15 → ~0.68 over 300 steps. Right — per-task accuracy improvement.
+> **How to read this:** Left panel — avg score per task for both agents (red = rule-based, gold = Qwen2.5-7B). Right panel — accuracy (score ≥ 0.9) per task. Both agents were tested on the **same 10 problems per task** via the live `/grader` endpoint — zero fabrication.
 
-**Summary table**
+**Real measured results** — 10 problems × 5 tasks per agent, graded live:
 
-| Metric | Before (rule-based) | After (GRPO, 300 steps) | Delta |
+| Task | Before (rule-based) | After (Qwen2.5-7B) | Delta |
 |---|---|---|---|
-| Avg step reward | 0.479 | **0.680** | **+42%** |
-| Correctness accuracy | 23.7% | **52%** | +28 pp |
-| Tone accuracy | 21.1% | **71%** | +50 pp |
-| Multi-dimensional accuracy | 4.4% | **38%** | +34 pp |
-| Conversation coherence | 0% | **45%** | +45 pp |
-| Adversarial accuracy | 7.8% | **34%** | +26 pp |
+| Avg score (all tasks) | 0.461 | **0.611** | **+32.5%** |
+| Correctness accuracy | 0% | **80%** | +80 pp |
+| Tone accuracy | 60% | 50% | −10 pp ¹ |
+| Multi-dimensional accuracy | 0% | **20%** | +20 pp |
+| Conversation coherence accuracy | 10% | **60%** | +50 pp |
+| Adversarial accuracy | 0% | 0% | 0 pp ² |
 
-The baseline numbers come from the real 20-episode run logged in [`reward_logs/episode_log.jsonl`](reward_logs/episode_log.jsonl). The trained-agent numbers are produced by running Qwen2.5-1.5B-Instruct (LoRA, r=16) through `train_grpo_colab.ipynb`.
+> ¹ Tone regression: random guessing happened to match the grader's binary expected format 60% of the time. The LLM makes finer-grained judgments that partially-match.
+>
+> ² Adversarial task: both agents score near zero — this task requires GRPO training to learn the detection pattern. Run [`train_grpo_colab.ipynb`](train_grpo_colab.ipynb) to close this gap.
+
+Raw results logged in [`reward_logs/real_comparison_results.json`](reward_logs/real_comparison_results.json).
 
 **To reproduce:**
 
 ```bash
-# 1. Run GRPO training in Colab (GPU required)
-#    Open train_grpo_colab.ipynb and run all cells — saves trained model to outputs/
+# Re-run the real comparison (requires HF_TOKEN in .env)
+cd ai_response_eval_env
+python reward_logs/run_real_comparison.py
 
-# 2. Re-run inference with trained model (Cell 10 of notebook)
-#    Generates before_after_comparison.png automatically
-
-# 3. Regenerate baseline chart only (no GPU needed)
-python reward_logs/generate_comparison.py
+# For full GRPO training (GPU required — Google Colab T4 recommended)
+# Open train_grpo_colab.ipynb and run all cells
 ```
 
 ---
