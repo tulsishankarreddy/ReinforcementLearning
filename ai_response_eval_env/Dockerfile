@@ -26,6 +26,9 @@ ENV PYTHONPATH="/app:/app/.."
 ENV PORT=7860
 EXPOSE 7860
 
+# Enable OpenEnv's built-in Quick Start + Playground UI at /web
+ENV ENABLE_WEB_INTERFACE=true
+
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD curl -fsS http://localhost:${PORT}/health || exit 1
 
