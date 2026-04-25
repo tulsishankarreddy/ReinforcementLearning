@@ -1984,6 +1984,10 @@ class AIResponseEvalEnvironment(Environment):
         )
 
     def step(self, action: AIResponseEvalAction) -> AIResponseEvalObservation:  # type: ignore[override]
+        # Guard: environment not initialised yet (no reset() call or stale instance).
+        if not self._current_problem:
+            return self.reset()
+
         self._state.step_count += 1
         self._steps_at_level[self._difficulty] = self._steps_at_level.get(self._difficulty, 0) + 1
 
@@ -2179,20 +2183,23 @@ class AIResponseEvalEnvironment(Environment):
     # ── Expected answer formatting ──────────────────────────────────
     @staticmethod
     def _format_expected(task_type: str, problem: Dict) -> str:
-        if task_type == "correctness_check":
-            return f"{problem['answer_judgment']}, {problem['answer_reason']}"
-        elif task_type == "tone_appropriateness":
-            return f"{problem['answer_rating']}, {', '.join(problem['answer_issues'])}"
-        elif task_type == "multi_dimensional":
-            return ", ".join(f"{k}={v}" for k, v in problem["expected_scores"].items())
-        elif task_type == "conversation_coherence":
-            return (
-                f"consistent={problem['answer_consistent']}, "
-                f"contradictions={problem['answer_contradictions']}, "
-                f"context_loss={problem['answer_context_loss']}"
-            )
-        else:  # adversarial_check
-            return f"issue={problem['answer_issue']}, severity={problem['answer_severity']}"
+        try:
+            if task_type == "correctness_check":
+                return f"{problem['answer_judgment']}, {problem['answer_reason']}"
+            elif task_type == "tone_appropriateness":
+                return f"{problem['answer_rating']}, {', '.join(problem['answer_issues'])}"
+            elif task_type == "multi_dimensional":
+                return ", ".join(f"{k}={v}" for k, v in problem["expected_scores"].items())
+            elif task_type == "conversation_coherence":
+                return (
+                    f"consistent={problem['answer_consistent']}, "
+                    f"contradictions={problem['answer_contradictions']}, "
+                    f"context_loss={problem['answer_context_loss']}"
+                )
+            else:  # adversarial_check
+                return f"issue={problem['answer_issue']}, severity={problem['answer_severity']}"
+        except (KeyError, TypeError):
+            return ""
 
     @staticmethod
     def _clamp(score: float) -> float:
