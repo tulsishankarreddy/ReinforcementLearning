@@ -1,6 +1,6 @@
 # The RL Training Gym That Teaches AI to Judge Conversations
 
-*Meta PyTorch OpenEnv Hackathon 2026 · Theme #4: Self-Improvement*  
+*Meta PyTorch OpenEnv Hackathon 2026 · Theme #3: Self-Improvement*  
 *By Sai Bhargav Rallapalli & Tulasi Shankar Reddy*
 
 ---
@@ -52,9 +52,7 @@ Task 5 (adversarial) only unlocks after the agent proves itself on correctness a
 
 ---
 
-## How the Gym Gets Harder
-
-This is the part I'm most proud of.
+## The Curriculum That Hunts Your Blind Spots
 
 The environment keeps a running scorecard of where the agent fails — not just "failed on tone" but *which kind* of tone failure. "Keeps missing age-inappropriate issues." "Keeps giving the wrong empathy score for distressed users." When the agent starts getting comfortable, the environment uses an LLM to write fresh problems targeted at exactly those gaps. A second LLM validates the expected answer before the problem goes into the training pool — so we're not accidentally penalising correct answers.
 
@@ -223,6 +221,8 @@ What we added on top:
 
 ---
 
+![Decision Path Selection Flow-2026-04-26-084727](https://cdn-uploads.huggingface.co/production/uploads/66e4790845da0a1b7e9aeda7/ExuOVJjbfAY4iE-xLRAsv.png)
+
 ## Try It
 
 **Live environment**: [rsaibhargav-ai-response-eval-env.hf.space](https://rsaibhargav-ai-response-eval-env.hf.space)
@@ -248,4 +248,4 @@ print(score)  # 0.0 – 1.0
 ---
 
 *Built by [Sai Bhargav Rallapalli](https://huggingface.co/rsaibhargav) and Tulasi Shankar Reddy.*  
-*Meta PyTorch OpenEnv Hackathon 2026 — Theme #4: Self-Improvement*
+*Meta PyTorch OpenEnv Hackathon 2026 — Theme #3: Self-Improvement*
