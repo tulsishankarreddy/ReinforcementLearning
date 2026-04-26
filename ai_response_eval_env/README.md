@@ -1,5 +1,5 @@
 ---
-title: AI Judge Gym — Self-Improving RL Evaluation Environment
+title: AI Judge Gym — Self-Improving RL Training Environment for Conversational AI
 emoji: 🏋️
 colorFrom: indigo
 colorTo: purple
@@ -21,7 +21,7 @@ tags:
 # AI Response Evaluation Environment
 
 🚀 **Live Space**: [rsaibhargav-ai-response-eval-env.hf.space](https://rsaibhargav-ai-response-eval-env.hf.space)  
-📓 **Training Notebook**: [rsaibhargav/Jupyter-Notebook](https://huggingface.co/spaces/rsaibhargav/Jupyter-Notebook)  
+📓 **Training Notebook**: [rsaibhargav/Jupyter-Notebook](https://colab.research.google.com/drive/103VUrUVNPfVNXl6Dj7GPfo8u0iZPktlw#scrollTo=5tQ_qpynzT-W)  
 🤖 **Trained Model**: [TulasiSankar/ai-response-eval-grpo](https://huggingface.co/TulasiSankar/ai-response-eval-grpo)  
 📝 **Full Writeup**: [Blog.md](Blog.md)
 

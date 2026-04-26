@@ -1,6 +1,6 @@
-# A Self-Improving Training Gym for Conversational AI Quality Evaluation
+# The RL Training Gym That Teaches AI to Judge Conversations
 
-*Meta PyTorch OpenEnv Hackathon 2026 · Theme #4: Self-Improvement*  
+*Meta PyTorch OpenEnv Hackathon 2026 · Theme #3: Self-Improvement*  
 *By Sai Bhargav Rallapalli & Tulasi Shankar Reddy*
 
 ---
@@ -13,15 +13,15 @@ And the chatbot just... responds. With no guarantee that the response was correc
 
 Companies need a quality gate: an AI whose entire job is to watch another AI respond, and flag when something goes wrong. This project trains that quality-gate agent — specifically for conversational AI responses.
 
-The gym never gets easier. The better the evaluator agent gets, the harder the problems it faces. It can never plateau.
+The gym never gets easier. The better the trained agent gets, the harder the problems it faces. It can never plateau.
 
 ---
 
-## What the Agent Actually Evaluates
+## What the Agent Learns to Judge
 
 Every single task in this environment is asking the same underlying question: **how well did this conversational AI respond to this specific person?**
 
-The agent sees a conversation excerpt — a real user profile, what the user said, and how the AI replied. It has to evaluate the quality of that reply.
+The agent sees a conversation excerpt — a real user profile, what the user said, and how the AI replied. It has to judge the quality of that reply.
 
 Here's an example:
 
@@ -34,7 +34,7 @@ radiation across the visible spectrum, with shorter wavelengths
 preferentially scattered by atmospheric molecules."
 ```
 
-The chatbot's answer is technically correct. But it's completely wrong for a 7-year-old. The evaluator agent's job is to catch that — `inappropriate, too-technical, age-inappropriate`.
+The chatbot's answer is technically correct. But it's completely wrong for a 7-year-old. The trained agent's job is to catch that — `inappropriate, too-technical, age-inappropriate`.
 
 Five tasks, each examining a different dimension of how a conversational AI responds:
 
@@ -56,17 +56,17 @@ Task 5 (adversarial) is gated — it only unlocks after the agent demonstrates r
 
 This is the part that makes it a training environment rather than just a benchmark.
 
-The gym keeps a running scorecard of exactly where the evaluator agent fails. *"This agent keeps missing tone issues for elderly users."* *"This agent doesn't catch safety failures in multi-turn conversations."* When the agent starts getting comfortable, the environment uses an LLM to write fresh, harder conversation scenarios targeted at exactly those gaps. A second LLM validates the expected answer before the problem enters the training pool.
+The gym keeps a running scorecard of exactly where the trained agent fails. *"This agent keeps missing tone issues for elderly users."* *"This agent doesn't catch safety failures in multi-turn conversations."* When the agent starts getting comfortable, the environment uses an LLM to write fresh, harder conversation scenarios targeted at exactly those gaps. A second LLM validates the expected answer before the problem enters the training pool.
 
 So the curriculum is never static. As the agent improves on easy chatbot failures, the gym starts throwing harder ones — subtle tone mismatches, multi-turn contradictions that span five conversation turns, adversarial users who phrase injection attempts as polite requests.
 
-Four expert evaluator personas also rotate every three generated problems (Dr. Strict, Dr. Empathy, Dr. Safety, Dr. Adversarial), each with different priorities. The agent can't lock onto one evaluation style and stop growing.
+Four expert judge personas also rotate every three generated problems (Dr. Strict, Dr. Empathy, Dr. Safety, Dr. Adversarial), each with different priorities. The agent can't lock onto one judging style and stop growing.
 
 ---
 
 ## The Production-Grade Monitoring Layer
 
-Beyond the graded tasks, the environment runs a safety and coverage analytics pass on every step — the instrumentation a real team deploying a conversational AI would actually want.
+Beyond the graded tasks, the environment runs a safety monitoring pass on every step — the instrumentation a real team deploying a conversational AI would actually want.
 
 **Toxicity scoring** — each conversation scenario gets a 0.0–1.0 toxicity score before the agent sees it.
 
@@ -76,7 +76,7 @@ Beyond the graded tasks, the environment runs a safety and coverage analytics pa
 
 **Run-level risk tier** — LOW / MEDIUM / HIGH / CRITICAL, blending severity, toxicity, fairness, agent misses, and persona vulnerability.
 
-**Coverage matrix** — tracks which (task × user type × language × difficulty) combinations have been tested, and which are still blind spots.
+**Test gap tracking** — a map of which (task × user type × language × difficulty) combinations have been tested and which are still blind spots. This is why the curriculum is never random: instead of repeating easy cases, the gym actively steers training toward untested corners.
 
 **Root-cause clusters** — turns the agent's mistake history into named failure patterns: Safety Blindspot, Over-trust on Inputs, Context-Tracking Weakness, Format-Compliance Gap.
 
@@ -103,7 +103,7 @@ At the end of each episode:
 
 We trained `Qwen2.5-1.5B-Instruct` using GRPO for 1000 steps on the conversational evaluation tasks. The reward starts at ~0.50 (barely above random format guessing), climbs steeply to ~0.78 by step 300, and plateaus around **0.81** — a **+62% improvement** from cold start to convergence.
 
-That curve is the model learning that evaluating a conversational AI response requires actually reading the conversation, not just producing a valid verdict format.
+That curve is the model learning that judging a conversational AI response requires actually reading the conversation, not just producing a valid verdict format.
 
 ### Before vs After — 20 Episodes Each
 
@@ -139,22 +139,22 @@ The multi-dim dip is the model learning the right strategy: instead of lucky ran
 |---|---|
 | ![300 steps](reward_logs/baseline_after_training_300.png) | ![1000 steps](reward_logs/baseline_after_training_1000.png) |
 
-The tone breakthrough appears at 300 steps. 1000 steps locks it in and begins improving coherence evaluation.
+The tone breakthrough appears at 300 steps. 1000 steps locks it in and begins improving coherence scoring.
 
 ---
 
-## How to Benchmark Your Own Conversational AI Agent
+## How to Train Your Own Agent in This Gym
 
-You can point this environment at any conversational AI system and get a structured evaluation. The loop is straightforward:
+The environment hands your agent a conversation scenario. Your agent submits a verdict. The environment scores it and moves to a harder problem if the agent is doing well. The loop is straightforward:
 
 ```
-Environment                             Your Evaluator Agent
-───────────                             ────────────────────
-POST /reset  ──── conversation ──────►  reads user profile + chatbot reply
-                                        asks: "was this reply good?"
-POST /step   ◄─── {"answer": verdict} ─ submits structured judgment
-             ──── reward ────────────►  0.9 (correct) or 0.1 (missed it)
-             ──── next conversation ──►  harder if it did well
+Environment                          Your Agent (being trained)
+───────────                          ──────────────────────────
+POST /reset  ──── conversation ───►  reads user profile + chatbot reply
+                                     asks: "was this reply good?"
+POST /step   ◄─── {"answer": …} ──── submits verdict as plain text
+             ──── reward ─────────►  0.9 (nailed it) or 0.1 (missed it)
+             ──── next scenario ───►  harder if the agent is doing well
 ```
 
 Minimal working example against the live Space:
@@ -168,10 +168,10 @@ obs = requests.post(f"{BASE_URL}/reset").json()["observation"]
 
 for _ in range(24):  # one full episode
     task    = obs["task_type"]        # correctness_check | tone_appropriateness | ...
-    context = obs["test_case_input"]  # the chatbot conversation to evaluate
+    context = obs["test_case_input"]  # the chatbot conversation to judge
 
-    # ── Your evaluator agent here ─────────────────────────────────
-    verdict = my_evaluator.judge(task, context)  # returns a verdict string
+    # ── Your agent here ───────────────────────────────────────────
+    verdict = my_agent.judge(task, context)  # returns a verdict string
     # ─────────────────────────────────────────────────────────────
 
     result = requests.post(f"{BASE_URL}/step", json={"answer": verdict}).json()
@@ -186,7 +186,7 @@ for _ in range(24):  # one full episode
 
 How to read the results:
 
-| Signal | Good evaluator | Weak evaluator |
+| Signal | Strong agent | Weak agent |
 |---|---|---|
 | Reward per step | Climbs above 0.7 | Flat 0.1–0.4 |
 | Difficulty progression | Easy → medium → hard | Stuck at easy |
@@ -196,25 +196,36 @@ How to read the results:
 
 ---
 
-## What Makes This Different from Existing Tools
+## Why RL, Not Just Prompt Tuning
 
-Prompt tuning is the easy alternative: write a rubric, tell the model to follow it, freeze it. Works fine for known failure patterns. Breaks on novel ones.
+The obvious question: why not just write a rubric and prompt the model to follow it?
+
+Prompt tuning works up to a point. You write "evaluate tone appropriateness, consider the user's age and mood," freeze the prompt, and ship it. For known failure patterns it's fine. But it has a hard ceiling:
+
+- **No generalisation to novel failures** — the prompt describes categories; it doesn't teach the model what a subtle tone mismatch *feels like* in a new scenario it's never seen
+- **No calibration by stakes** — a prompt can say "be careful with minors" but can't make a wrong answer on a 7-year-old cost more than the same wrong answer on an adult
+- **No curriculum** — the model reads the same rubric every time; there's nothing that pushes it toward harder cases as it improves
+- **Static by design** — once deployed, it stops improving. The gap between what it can and can't catch never closes
+
+RL training on this environment solves all four. The reward signal reflects real stakes (persona weighting), the curriculum targets real gaps (weakness tracker), and the agent keeps improving because the gym keeps generating harder problems than it's seen before. The training curve going from 0.50 to 0.81 over 1000 steps is what that looks like in practice.
+
+## What Makes This Different from Existing Tools
 
 The existing landscape:
 
-- **Prometheus 2** — fine-tunes an evaluator with SFT/DPO. Static, no adaptive curriculum.
-- **Garak / PyRIT** — find attack vectors on conversational AI, don't train evaluators.
-- **MT-Bench** — benchmarks chatbot quality, doesn't train evaluators.
-- **J1 (2025)** — closest: uses GRPO to train judges. No weakness-targeted curriculum, no user personas, no coverage tracking.
+- **Prometheus 2** — fine-tunes an agent with SFT/DPO. Static, no adaptive curriculum.
+- **Garak / PyRIT** — find attack vectors on conversational AI, don't train agents.
+- **MT-Bench** — benchmarks chatbot quality, doesn't train agents.
+- **J1 (2025)** — closest: uses GRPO to train judges. No weakness-targeted curriculum, no user personas, no test gap tracking.
 
 What this environment adds on top of all of them:
 
-- **Weakness-targeted curriculum**: when the evaluator keeps failing on tone for elderly users, the gym generates more of those — not random problems, targeted ones
-- **User persona weighting**: a wrong call on a Vulnerable User costs more than the same wrong call on a General User — the training signal reflects real-world stakes
-- **Coverage matrix**: ensures the evaluator gets tested across all user types, languages, and difficulty levels — not just the common cases
-- **Coherence task**: specifically tests multi-turn conversation tracking, which none of the above tools include as a trainable evaluation skill
+- **Weakness-targeted curriculum** — when the agent keeps failing on tone for elderly users, the gym generates more of those scenarios specifically — not random problems
+- **Persona-weighted reward** — a wrong call on a Vulnerable User costs more than the same wrong call on a General User; the training signal reflects real-world stakes
+- **Test gap tracking** — steers the curriculum toward untested user-type / language / difficulty combinations, so the agent doesn't just get good at the common cases
+- **Coherence task** — specifically trains multi-turn conversation tracking, which none of the above tools include as a trainable skill
 
-One-liner: instead of telling an evaluator agent what good judgment looks like for conversational AI, this environment makes it discover that through experience — and keeps moving the goalposts so it never stops improving.
+One-liner: instead of telling an agent what good judgment looks like, this environment makes it discover that through experience — and keeps moving the goalposts so it never stops improving.
 
 ---
 
@@ -236,8 +247,8 @@ print(score)  # 0.0 – 1.0
 
 **Trained model**: [TulasiSankar/ai-response-eval-grpo](https://huggingface.co/TulasiSankar/ai-response-eval-grpo)
 
-**Evaluation notebooks**:
-- [baseline_evaluation_before_training_HF.ipynb](baseline_evaluation_before_training_HF.ipynb) — run the baseline
+**Notebooks**:
+- [baseline_evaluation_before_training_HF.ipynb](baseline_evaluation_before_training_HF.ipynb) — run the baseline agent
 - [baseline_evaluation_after_training_1000_steps.ipynb](baseline_evaluation_after_training_1000_steps.ipynb) — run the trained model
 
 ---
