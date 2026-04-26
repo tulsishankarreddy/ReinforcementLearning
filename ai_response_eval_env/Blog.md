@@ -232,7 +232,7 @@ score = requests.post(
 print(score)  # 0.0 – 1.0
 ```
 
-**GRPO training notebook**: [rsaibhargav/Jupyter-Notebook](https://www.kaggle.com/code/rsbhargav/ai-response-eval-train)
+**GRPO training notebook**: [rsaibhargav/Jupyter-Notebook](https://colab.research.google.com/drive/103VUrUVNPfVNXl6Dj7GPfo8u0iZPktlw?usp=sharing)
 
 **Trained model**: [TulasiSankar/ai-response-eval-grpo](https://huggingface.co/TulasiSankar/ai-response-eval-grpo)
 
